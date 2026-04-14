@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veomall OS</title>
+    <link rel="stylesheet" href="/static/css/win3.css">
+    <style>
+        .boot-screen {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            color: #C0C0C0;
+            font-family: var(--win-font-mono);
+            font-size: 14px;
+            padding: 20px;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s;
+        }
+        .boot-screen.fade-out { opacity: 0; pointer-events: none; }
+        .boot-logo {
+            font-size: 18px;
+            font-weight: bold;
+            color: #FFFFFF;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .boot-progress {
+            width: 300px;
+            height: 20px;
+            border: 2px solid #808080;
+            background: #000;
+            position: relative;
+            overflow: hidden;
+        }
+        .boot-progress-fill {
+            height: 100%;
+            background: #000080;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .boot-text {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #808080;
+        }
+    </style>
+</head>
+<body>
+    <div class="boot-screen" id="boot-screen">
+        <div class="boot-logo">
+            ╔══════════════════════════════╗<br>
+            ║&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; V E O M A L L &nbsp;O S &nbsp;&nbsp;&nbsp;&nbsp;║<br>
+            ║&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Version 1.0 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;║<br>
+            ╚══════════════════════════════╝
+        </div>
+        <div class="boot-progress"><div class="boot-progress-fill" id="boot-fill"></div></div>
+        <div class="boot-text" id="boot-text">Loading system...</div>
+    </div>
+
+    <div id="desktop">
+        <div id="desktop-icons"></div>
+    </div>
+
+    <div id="taskbar">
+        <div id="start-btn">
+            <svg class="start-icon" viewBox="0 0 16 16" width="16" height="16">
+                <rect x="1" y="1" width="6" height="6" fill="#FF0000"/>
+                <rect x="9" y="1" width="6" height="6" fill="#00AA00"/>
+                <rect x="1" y="9" width="6" height="6" fill="#0000FF"/>
+                <rect x="9" y="9" width="6" height="6" fill="#FFAA00"/>
+            </svg>
+            Start
+        </div>
+        <div id="taskbar-windows"></div>
+        <div id="taskbar-clock"></div>
+    </div>
+
+    <div id="start-menu">
+        <div class="menu-sidebar"><span>Veomall OS</span></div>
+        <div class="menu-items" id="start-menu-items"></div>
+    </div>
+
+    <div id="windows-container"></div>
+
+    <!-- SVG Icon definitions -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+        <defs>
+            <linearGradient id="ico-w7ft" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#C9E8FF"/><stop offset="100%" stop-color="#5FA4E8"/></linearGradient>
+            <linearGradient id="ico-w7fb" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#6CB9F0"/><stop offset="100%" stop-color="#2A7DCC"/></linearGradient>
+            <linearGradient id="ico-w7scr" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#A8D86A"/><stop offset="100%" stop-color="#3D7C2E"/></linearGradient>
+        </defs>
+        <symbol id="icon-folder" viewBox="0 0 32 32">
+            <rect x="2" y="8" width="28" height="20" fill="#FFAA00" stroke="#000" stroke-width="1"/>
+            <rect x="2" y="6" width="14" height="4" fill="#FFAA00" stroke="#000" stroke-width="1"/>
+            <rect x="2" y="8" width="28" height="2" fill="#FFD466"/>
+        </symbol>
+        <symbol id="icon-folder-open" viewBox="0 0 32 32">
+            <rect x="2" y="8" width="28" height="20" fill="#FFAA00" stroke="#000" stroke-width="1"/>
+            <rect x="2" y="6" width="14" height="4" fill="#FFAA00" stroke="#000" stroke-width="1"/>
+            <polygon points="0,28 4,14 30,14 26,28" fill="#FFD466" stroke="#000" stroke-width="1"/>
+        </symbol>
+        <symbol id="icon-file" viewBox="0 0 32 32">
+            <rect x="4" y="2" width="20" height="28" fill="#FFFFFF" stroke="#000" stroke-width="1"/>
+            <polygon points="24,2 24,10 30,10" fill="#C0C0C0" stroke="#000" stroke-width="1"/>
+            <line x1="24" y1="2" x2="30" y2="10" stroke="#000" stroke-width="1"/>
+            <rect x="24" y="2" width="6" height="8" fill="#C0C0C0" stroke="#000" stroke-width="1"/>
+            <rect x="4" y="2" width="20" height="28" fill="#FFFFFF" stroke="#000" stroke-width="1"/>
+            <polygon points="24,2 24,10 30,10" fill="#C0C0C0" stroke="#000" stroke-width="1"/>
+            <line x1="8" y1="14" x2="22" y2="14" stroke="#000" stroke-width="1"/>
+            <line x1="8" y1="18" x2="22" y2="18" stroke="#000" stroke-width="1"/>
+            <line x1="8" y1="22" x2="18" y2="22" stroke="#000" stroke-width="1"/>
+        </symbol>
+        <symbol id="icon-file-md" viewBox="0 0 32 32">
+            <rect x="4" y="2" width="24" height="28" fill="#FFFFFF" stroke="#000" stroke-width="1"/>
+            <rect x="4" y="2" width="24" height="6" fill="#6666FF"/>
+            <text x="16" y="7" text-anchor="middle" fill="white" font-size="5" font-weight="bold">MD</text>
+            <line x1="8" y1="14" x2="24" y2="14" stroke="#000" stroke-width="1"/>
+            <line x1="8" y1="18" x2="24" y2="18" stroke="#000" stroke-width="1"/>
+            <line x1="8" y1="22" x2="20" y2="22" stroke="#000" stroke-width="1"/>
+        </symbol>
+        <symbol id="icon-terminal" viewBox="0 0 32 32">
+            <rect x="2" y="4" width="28" height="24" fill="#000000" stroke="#808080" stroke-width="2"/>
+            <text x="6" y="16" fill="#C0C0C0" font-size="8" font-family="monospace">C:\&gt;_</text>
+        </symbol>
+        <symbol id="icon-computer" viewBox="0 0 32 32">
+            <rect x="3" y="2" width="26" height="18" fill="#000080" stroke="#808080" stroke-width="2" rx="1"/>
+            <rect x="5" y="4" width="22" height="14" fill="#008080"/>
+            <rect x="10" y="22" width="12" height="3" fill="#C0C0C0" stroke="#808080" stroke-width="1"/>
+            <rect x="6" y="25" width="20" height="3" fill="#C0C0C0" stroke="#808080" stroke-width="1"/>
+        </symbol>
+        <symbol id="icon-globe" viewBox="0 0 32 32">
+            <circle cx="16" cy="16" r="12" fill="none" stroke="#000080" stroke-width="2"/>
+            <ellipse cx="16" cy="16" rx="6" ry="12" fill="none" stroke="#000080" stroke-width="1"/>
+            <line x1="4" y1="16" x2="28" y2="16" stroke="#000080" stroke-width="1"/>
+            <line x1="6" y1="10" x2="26" y2="10" stroke="#000080" stroke-width="1"/>
+            <line x1="6" y1="22" x2="26" y2="22" stroke="#000080" stroke-width="1"/>
+        </symbol>
+        <symbol id="icon-chart" viewBox="0 0 32 32">
+            <rect x="2" y="2" width="28" height="28" fill="#FFFFFF" stroke="#000" stroke-width="1"/>
+            <rect x="6" y="18" width="4" height="8" fill="#FF0000"/>
+            <rect x="12" y="12" width="4" height="14" fill="#00AA00"/>
+            <rect x="18" y="8" width="4" height="18" fill="#0000FF"/>
+            <rect x="24" y="14" width="4" height="12" fill="#FFAA00"/>
+        </symbol>
+        <symbol id="icon-github" viewBox="0 0 32 32">
+            <circle cx="16" cy="16" r="13" fill="#000" stroke="#000" stroke-width="1"/>
+            <circle cx="16" cy="14" r="6" fill="#FFF"/>
+            <ellipse cx="12" cy="18" rx="3" ry="5" fill="#FFF"/>
+            <ellipse cx="20" cy="18" rx="3" ry="5" fill="#FFF"/>
+            <circle cx="16" cy="14" r="4" fill="#000"/>
+            <circle cx="13" cy="12" r="1.5" fill="#FFF"/>
+            <circle cx="19" cy="12" r="1.5" fill="#FFF"/>
+        </symbol>
+        <symbol id="icon-person" viewBox="0 0 32 32">
+            <circle cx="16" cy="10" r="6" fill="#000080"/>
+            <ellipse cx="16" cy="28" rx="10" ry="8" fill="#000080"/>
+        </symbol>
+        <symbol id="icon-blog" viewBox="0 0 32 32">
+            <rect x="3" y="2" width="26" height="28" fill="#FFFFCC" stroke="#000" stroke-width="1"/>
+            <line x1="7" y1="8" x2="25" y2="8" stroke="#000080" stroke-width="1"/>
+            <line x1="7" y1="12" x2="25" y2="12" stroke="#808080" stroke-width="1"/>
+            <line x1="7" y1="16" x2="25" y2="16" stroke="#808080" stroke-width="1"/>
+            <line x1="7" y1="20" x2="20" y2="20" stroke="#808080" stroke-width="1"/>
+            <line x1="7" y1="24" x2="22" y2="24" stroke="#808080" stroke-width="1"/>
+        </symbol>
+        <symbol id="icon-app" viewBox="0 0 32 32">
+            <rect x="3" y="3" width="26" height="26" fill="#C0C0C0" stroke="#000" stroke-width="1"/>
+            <rect x="3" y="3" width="26" height="6" fill="#000080"/>
+            <rect x="7" y="12" width="18" height="3" fill="#808080"/>
+            <rect x="7" y="18" width="18" height="3" fill="#808080"/>
+            <rect x="7" y="24" width="12" height="3" fill="#808080"/>
+        </symbol>
+        <symbol id="icon-key" viewBox="0 0 32 32">
+            <circle cx="12" cy="12" r="7" fill="none" stroke="#FFAA00" stroke-width="3"/>
+            <line x1="17" y1="17" x2="28" y2="28" stroke="#FFAA00" stroke-width="3"/>
+            <line x1="24" y1="24" x2="28" y2="20" stroke="#FFAA00" stroke-width="2"/>
+        </symbol>
+        <symbol id="icon-mine" viewBox="0 0 32 32">
+            <circle cx="16" cy="16" r="8" fill="#000"/>
+            <line x1="16" y1="4" x2="16" y2="28" stroke="#000" stroke-width="2"/>
+            <line x1="4" y1="16" x2="28" y2="16" stroke="#000" stroke-width="2"/>
+            <line x1="7" y1="7" x2="25" y2="25" stroke="#000" stroke-width="2"/>
+            <line x1="25" y1="7" x2="7" y2="25" stroke="#000" stroke-width="2"/>
+            <circle cx="13" cy="13" r="2" fill="#FFF"/>
+        </symbol>
+        <symbol id="icon-cards" viewBox="0 0 32 32">
+            <rect x="4" y="4" width="16" height="22" rx="2" fill="#fff" stroke="#000" stroke-width="1"/>
+            <rect x="12" y="6" width="16" height="22" rx="2" fill="#fff" stroke="#000" stroke-width="1"/>
+            <text x="8" y="16" fill="#D00" font-size="10" font-weight="bold">♥</text>
+            <text x="20" y="20" fill="#000" font-size="10" font-weight="bold">♠</text>
+        </symbol>
+        <symbol id="icon-snake" viewBox="0 0 32 32">
+            <path d="M4 16 Q4 4 16 4 Q28 4 28 16 Q28 24 20 24 L12 24 Q8 24 8 20 L8 18" fill="none" stroke="#00CC00" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="6" cy="16" r="3" fill="#00FF00"/>
+            <circle cx="5" cy="15" r="1" fill="#000"/>
+        </symbol>
+        <symbol id="icon-tetris" viewBox="0 0 32 32">
+            <rect x="2" y="18" width="8" height="8" fill="#00FFFF" stroke="#000" stroke-width="1"/>
+            <rect x="10" y="18" width="8" height="8" fill="#00FFFF" stroke="#000" stroke-width="1"/>
+            <rect x="10" y="10" width="8" height="8" fill="#00FFFF" stroke="#000" stroke-width="1"/>
+            <rect x="18" y="10" width="8" height="8" fill="#00FFFF" stroke="#000" stroke-width="1"/>
+            <rect x="6" y="2" width="8" height="8" fill="#FFFF00" stroke="#000" stroke-width="1"/>
+            <rect x="14" y="2" width="8" height="8" fill="#FFFF00" stroke="#000" stroke-width="1"/>
+        </symbol>
+        <symbol id="icon-settings" viewBox="0 0 32 32">
+            <circle cx="16" cy="16" r="6" fill="none" stroke="#000" stroke-width="2"/>
+            <circle cx="16" cy="16" r="2" fill="#000"/>
+            <line x1="16" y1="2" x2="16" y2="8" stroke="#808080" stroke-width="3"/>
+            <line x1="16" y1="24" x2="16" y2="30" stroke="#808080" stroke-width="3"/>
+            <line x1="2" y1="16" x2="8" y2="16" stroke="#808080" stroke-width="3"/>
+            <line x1="24" y1="16" x2="30" y2="16" stroke="#808080" stroke-width="3"/>
+            <line x1="6" y1="6" x2="10" y2="10" stroke="#808080" stroke-width="3"/>
+            <line x1="22" y1="22" x2="26" y2="26" stroke="#808080" stroke-width="3"/>
+            <line x1="6" y1="26" x2="10" y2="22" stroke="#808080" stroke-width="3"/>
+            <line x1="22" y1="10" x2="26" y2="6" stroke="#808080" stroke-width="3"/>
+        </symbol>
+        <!-- Fluent-style icons (Win 7 / 8.1 / 10 / 11) -->
+        <symbol id="icon-folder-modern" viewBox="0 0 24 24">
+            <path fill="#FFB900" d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
+            <path fill="#FFCA28" d="M2 10h20v8c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2v-8z" opacity=".35"/>
+        </symbol>
+        <symbol id="icon-folder-open-modern" viewBox="0 0 24 24">
+            <path fill="#FFB900" d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/>
+        </symbol>
+        <symbol id="icon-file-modern" viewBox="0 0 24 24">
+            <path fill="#F3F2F1" stroke="#C8C6C4" stroke-width="1" d="M6 2h8l4 4v16a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/>
+            <path fill="#EDEBE9" d="M14 2v4h4"/>
+            <line x1="8" y1="13" x2="16" y2="13" stroke="#A19F9D" stroke-width="1"/>
+            <line x1="8" y1="16" x2="16" y2="16" stroke="#A19F9D" stroke-width="1"/>
+        </symbol>
+        <symbol id="icon-file-md-modern" viewBox="0 0 24 24">
+            <path fill="#F3F2F1" stroke="#C8C6C4" stroke-width="1" d="M6 2h8l4 4v16a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/>
+            <rect x="6" y="2" width="12" height="5" fill="#0078D4" rx="0"/>
+            <text x="12" y="6" text-anchor="middle" fill="#fff" font-size="4" font-weight="bold" font-family="Segoe UI,sans-serif">MD</text>
+        </symbol>
+        <symbol id="icon-terminal-modern" viewBox="0 0 24 24">
+            <rect width="24" height="24" rx="4" fill="#1E1E1E"/>
+            <path fill="none" stroke="#3ECF8E" stroke-width="1.5" stroke-linecap="round" d="M5 9l3.5 3L5 15M10.5 15H18"/>
+        </symbol>
+        <symbol id="icon-computer-modern" viewBox="0 0 24 24">
+            <rect x="3" y="4" width="18" height="12" rx="2" fill="#E1DFDD" stroke="#C8C6C4"/>
+            <rect x="5" y="6" width="14" height="8" fill="#323130"/>
+            <rect x="9" y="17" width="6" height="2" rx="1" fill="#C8C6C4"/>
+            <rect x="6" y="19" width="12" height="2" rx="1" fill="#A19F9D"/>
+        </symbol>
+        <symbol id="icon-globe-modern" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9" fill="none" stroke="#0078D4" stroke-width="1.5"/>
+            <ellipse cx="12" cy="12" rx="4" ry="9" fill="none" stroke="#0078D4" stroke-width="1"/>
+            <line x1="3" y1="12" x2="21" y2="12" stroke="#0078D4" stroke-width="1"/>
+            <path fill="#0078D4" opacity=".2" d="M12 3a9 9 0 019 9h-9V3z"/>
+        </symbol>
+        <symbol id="icon-chart-modern" viewBox="0 0 24 24">
+            <rect x="4" y="14" width="4" height="6" rx="1" fill="#E81123"/>
+            <rect x="10" y="10" width="4" height="10" rx="1" fill="#107C10"/>
+            <rect x="16" y="6" width="4" height="14" rx="1" fill="#0078D4"/>
+        </symbol>
+        <symbol id="icon-github-modern" viewBox="0 0 24 24">
+            <path fill="#24292F" d="M12 2C6.48 2 2 6.58 2 12.26c0 4.5 2.87 8.32 6.84 9.67.5.1.68-.22.68-.48 0-.24-.01-.87-.01-1.7-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.1-1.5-1.1-1.5-.9-.64.07-.62.07-.62 1 .07 1.53 1.05 1.53 1.05.9 1.52 2.35 1.08 2.92.83.09-.65.35-1.09.63-1.34-2.22-.26-4.55-1.14-4.55-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.72 0 0 .84-.27 2.75 1.05A9.38 9.38 0 0112 6.84c.85.004 1.71.11 2.5.33 1.91-1.32 2.75-1.05 2.75-1.05.55 1.42.2 2.46.1 2.72.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.8-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.48-.01 2.82 0 .27.18.59.69.48A10.02 10.02 0 0022 12.26C22 6.58 17.52 2 12 2z"/>
+        </symbol>
+        <symbol id="icon-person-modern" viewBox="0 0 24 24">
+            <circle cx="12" cy="8" r="4" fill="#0078D4"/>
+            <path fill="#0078D4" d="M6 20c0-3.31 2.69-6 6-6s6 2.69 6 6v1H6v-1z" opacity=".85"/>
+        </symbol>
+        <symbol id="icon-blog-modern" viewBox="0 0 24 24">
+            <path fill="#F3F2F1" stroke="#C8C6C4" d="M6 3h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2z"/>
+            <line x1="8" y1="8" x2="16" y2="8" stroke="#0078D4" stroke-width="1.5"/>
+            <line x1="8" y1="11" x2="16" y2="11" stroke="#A19F9D"/>
+            <line x1="8" y1="14" x2="14" y2="14" stroke="#A19F9D"/>
+        </symbol>
+        <symbol id="icon-app-modern" viewBox="0 0 24 24">
+            <rect x="3" y="5" width="18" height="14" rx="2" fill="#FAF9F8" stroke="#EDEBE9"/>
+            <rect x="3" y="5" width="18" height="5" rx="2" fill="#0078D4"/>
+            <line x1="7" y1="14" x2="15" y2="14" stroke="#C8C6C4"/>
+            <line x1="7" y1="17" x2="12" y2="17" stroke="#C8C6C4"/>
+        </symbol>
+        <symbol id="icon-key-modern" viewBox="0 0 24 24">
+            <circle cx="8" cy="16" r="4" fill="none" stroke="#CA5010" stroke-width="2"/>
+            <path fill="none" stroke="#CA5010" stroke-width="2" stroke-linecap="round" d="M11 13l8-8M17 7l2 2"/>
+        </symbol>
+        <symbol id="icon-mine-modern" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="8" fill="#323130"/>
+            <line x1="12" y1="4" x2="12" y2="20" stroke="#605E5C" stroke-width="1.5"/>
+            <line x1="4" y1="12" x2="20" y2="12" stroke="#605E5C" stroke-width="1.5"/>
+            <line x1="6" y1="6" x2="18" y2="18" stroke="#605E5C" stroke-width="1.5"/>
+            <line x1="18" y1="6" x2="6" y2="18" stroke="#605E5C" stroke-width="1.5"/>
+            <circle cx="10" cy="10" r="1.5" fill="#fff"/>
+        </symbol>
+        <symbol id="icon-cards-modern" viewBox="0 0 24 24">
+            <rect x="3" y="5" width="11" height="15" rx="2" fill="#fff" stroke="#C8C6C4"/>
+            <rect x="8" y="3" width="11" height="15" rx="2" fill="#F3F2F1" stroke="#A19F9D"/>
+            <text x="7" y="14" fill="#E81123" font-size="6" font-weight="bold">♥</text>
+        </symbol>
+        <symbol id="icon-snake-modern" viewBox="0 0 24 24">
+            <path fill="none" stroke="#107C10" stroke-width="2.5" stroke-linecap="round" d="M4 14c0-4 3-7 7-7s7 3 7 7"/>
+            <circle cx="6" cy="14" r="3" fill="#107C10"/>
+            <circle cx="5" cy="13" r="0.8" fill="#fff"/>
+        </symbol>
+        <symbol id="icon-tetris-modern" viewBox="0 0 24 24">
+            <rect x="3" y="14" width="5" height="5" rx="1" fill="#00BCF2"/>
+            <rect x="9" y="14" width="5" height="5" rx="1" fill="#00BCF2"/>
+            <rect x="9" y="8" width="5" height="5" rx="1" fill="#8764B8"/>
+            <rect x="15" y="8" width="5" height="5" rx="1" fill="#8764B8"/>
+        </symbol>
+        <symbol id="icon-settings-modern" viewBox="0 0 24 24">
+            <path fill="#605E5C" d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65A.488.488 0 0014 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.13-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
+        </symbol>
+        <!-- Start screen tiles: white glyphs (no CSS filter) -->
+        <symbol id="icon-folder-tile" viewBox="0 0 24 24"><path fill="#fff" d="M10 5H5c-.83 0-1.5.67-1.5 1.5V8h17V7.5c0-.83-.67-1.5-1.5-1.5h-7l-2-2z"/><path fill="#fff" opacity=".9" d="M3.5 8v11c0 .83.67 1.5 1.5 1.5h15c.83 0 1.5-.67 1.5-1.5V8h-17z"/></symbol>
+        <symbol id="icon-folder-open-tile" viewBox="0 0 24 24"><path fill="#fff" opacity=".92" d="M3 18h18l-1.5-8H4.5L3 18z"/><path fill="#fff" d="M20 6h-8l-2-2H5C3.9 4 3 4.9 3 6v1h17.2c.5 0 .8-.5.8-1z"/></symbol>
+        <symbol id="icon-file-tile" viewBox="0 0 24 24"><path fill="none" stroke="#fff" stroke-width="1.6" d="M7 3.5h7l4 4v13a1.5 1.5 0 01-1.5 1.5H7A1.5 1.5 0 015.5 20V5A1.5 1.5 0 017 3.5z"/><path fill="#fff" d="M14 3.5v4h4"/><line x1="8" y1="13" x2="16" y2="13" stroke="#fff" stroke-width="1.2"/><line x1="8" y1="16" x2="16" y2="16" stroke="#fff" stroke-width="1.2"/></symbol>
+        <symbol id="icon-file-md-tile" viewBox="0 0 24 24"><path fill="none" stroke="#fff" stroke-width="1.6" d="M7 3.5h7l4 4v13a1.5 1.5 0 01-1.5 1.5H7A1.5 1.5 0 015.5 20V5A1.5 1.5 0 017 3.5z"/><rect x="6" y="3.5" width="12" height="5" fill="#fff"/><text x="12" y="7.2" text-anchor="middle" fill="#2D7D9A" font-size="3.6" font-weight="bold" font-family="Segoe UI,sans-serif">MD</text></symbol>
+        <symbol id="icon-terminal-tile" viewBox="0 0 24 24"><rect x="2.5" y="3.5" width="19" height="17" rx="2" fill="none" stroke="#fff" stroke-width="1.8"/><path fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" d="M6 10l3.5 2.8L6 15.5M11.5 15.5H17"/></symbol>
+        <symbol id="icon-computer-tile" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="1.5" fill="none" stroke="#fff" stroke-width="1.6"/><rect x="5.5" y="6.5" width="13" height="7" fill="#fff" opacity=".25"/><rect x="9" y="17" width="6" height="2" rx=".5" fill="#fff"/><rect x="6" y="19" width="12" height="2" rx=".5" fill="#fff" opacity=".85"/></symbol>
+        <symbol id="icon-globe-tile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#fff" stroke-width="1.8"/><ellipse cx="12" cy="12" rx="4" ry="9" fill="none" stroke="#fff" stroke-width="1.2"/><line x1="3" y1="12" x2="21" y2="12" stroke="#fff" stroke-width="1.2"/></symbol>
+        <symbol id="icon-chart-tile" viewBox="0 0 24 24"><rect x="4" y="14" width="4" height="6" rx=".5" fill="#fff"/><rect x="10" y="10" width="4" height="10" rx=".5" fill="#fff" opacity=".95"/><rect x="16" y="6" width="4" height="14" rx=".5" fill="#fff" opacity=".9"/></symbol>
+        <symbol id="icon-github-tile" viewBox="0 0 24 24"><path fill="#fff" d="M12 3.2c-4.6 0-8.4 3.8-8.4 8.5 0 3.8 2.4 7 5.8 8.1.4.1.6-.2.6-.5v-1.6c-2.4.5-2.9-1.2-2.9-1.2-.4-1-1-1.3-1-1.3-.8-.6.1-.6.1-.6.9.1 1.4.9 1.4.9.8 1.4 2.1 1 2.6.8.1-.6.3-1 .5-1.2-1.9-.2-3.9-1-3.9-4.4 0-1 .3-1.8.9-2.4-.1-.2-.4-1 .1-2.2 0 0 .7-.2 2.4.9.7-.2 1.5-.3 2.2-.3s1.5.1 2.2.3c1.7-1.1 2.4-.9 2.4-.9.5 1.2.2 2 .1 2.2.6.6.9 1.4.9 2.4 0 3.4-2 4.2-3.9 4.4.4.3.7 1 .7 2v2.9c0 .3.2.6.6.5 3.4-1.1 5.8-4.3 5.8-8.1 0-4.7-3.8-8.5-8.4-8.5z"/></symbol>
+        <symbol id="icon-person-tile" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.8" fill="#fff"/><path fill="#fff" opacity=".92" d="M6.5 20.5v-.8c0-3 2.5-5.5 5.5-5.5s5.5 2.5 5.5 5.5v.8h-11z"/></symbol>
+        <symbol id="icon-blog-tile" viewBox="0 0 24 24"><path fill="none" stroke="#fff" stroke-width="1.6" d="M6.5 4h11A1.5 1.5 0 0119 5.5v13A1.5 1.5 0 0117.5 20h-11A1.5 1.5 0 015 18.5v-13A1.5 1.5 0 016.5 4z"/><line x1="8" y1="8" x2="16" y2="8" stroke="#fff" stroke-width="1.4"/><line x1="8" y1="11" x2="16" y2="11" stroke="#fff" stroke-width="1.1" opacity=".9"/><line x1="8" y1="14" x2="14" y2="14" stroke="#fff" stroke-width="1.1" opacity=".85"/></symbol>
+        <symbol id="icon-app-tile" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2" fill="none" stroke="#fff" stroke-width="1.6"/><rect x="3.5" y="5" width="17" height="5" rx="2" fill="#fff" opacity=".95"/><line x1="7" y1="14" x2="15" y2="14" stroke="#fff" stroke-width="1.2"/><line x1="7" y1="17" x2="12" y2="17" stroke="#fff" stroke-width="1.1" opacity=".9"/></symbol>
+        <symbol id="icon-key-tile" viewBox="0 0 24 24"><circle cx="9" cy="15" r="3.5" fill="none" stroke="#fff" stroke-width="1.6"/><path fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" d="M12 12l7-7M17 8l2 2"/></symbol>
+        <symbol id="icon-mine-tile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="#fff" stroke-width="1.6"/><line x1="12" y1="4" x2="12" y2="20" stroke="#fff" stroke-width="1.3"/><line x1="4" y1="12" x2="20" y2="12" stroke="#fff" stroke-width="1.3"/><line x1="6" y1="6" x2="18" y2="18" stroke="#fff" stroke-width="1.2"/><line x1="18" y1="6" x2="6" y2="18" stroke="#fff" stroke-width="1.2"/><circle cx="10" cy="10" r="1.3" fill="#fff"/></symbol>
+        <symbol id="icon-cards-tile" viewBox="0 0 24 24"><rect x="3" y="5" width="11" height="15" rx="1.5" fill="none" stroke="#fff" stroke-width="1.4"/><rect x="8" y="3" width="11" height="15" rx="1.5" fill="none" stroke="#fff" stroke-width="1.3" opacity=".9"/><text x="7" y="14.5" fill="#fff" font-size="6" font-weight="bold">♥</text></symbol>
+        <symbol id="icon-snake-tile" viewBox="0 0 24 24"><path fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" d="M4 14c0-4 3-7 7-7s7 3 7 7"/><circle cx="6" cy="14" r="3" fill="#fff"/><circle cx="5" cy="13" r="0.7" fill="#2D7D9A"/></symbol>
+        <symbol id="icon-tetris-tile" viewBox="0 0 24 24"><rect x="3" y="14" width="5" height="5" rx=".8" fill="#fff"/><rect x="9" y="14" width="5" height="5" rx=".8" fill="#fff" opacity=".95"/><rect x="9" y="8" width="5" height="5" rx=".8" fill="#fff" opacity=".9"/><rect x="15" y="8" width="5" height="5" rx=".8" fill="#fff" opacity=".85"/></symbol>
+        <symbol id="icon-settings-tile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5" fill="none" stroke="#fff" stroke-width="1.8"/><path fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.2 2.2M16.2 16.2l2.2 2.2M5.6 18.4l2.2-2.2M16.2 7.8l2.2-2.2"/></symbol>
+        <!-- Windows XP: Luna-style folder; остальные — как 3.1 -->
+        <symbol id="icon-folder-xp" viewBox="0 0 32 32"><rect x="2" y="10" width="28" height="18" fill="#FCE366" stroke="#C4A000" stroke-width="1"/><rect x="2" y="6" width="16" height="6" fill="#7CCB58" stroke="#3D8C3D" stroke-width="1"/><rect x="2" y="10" width="28" height="2" fill="#FFF9C4"/></symbol>
+        <symbol id="icon-folder-open-xp" viewBox="0 0 32 32"><polygon points="0,28 4,12 30,12 26,28" fill="#F5D76E" stroke="#C4A000" stroke-width="1"/><rect x="2" y="6" width="14" height="6" fill="#7CCB58" stroke="#3D8C3D" stroke-width="1"/></symbol>
+        <symbol id="icon-file-xp" viewBox="0 0 32 32"><use href="#icon-file"/></symbol>
+        <symbol id="icon-file-md-xp" viewBox="0 0 32 32"><use href="#icon-file-md"/></symbol>
+        <symbol id="icon-terminal-xp" viewBox="0 0 32 32"><use href="#icon-terminal"/></symbol>
+        <symbol id="icon-computer-xp" viewBox="0 0 32 32"><use href="#icon-computer"/></symbol>
+        <symbol id="icon-globe-xp" viewBox="0 0 32 32"><use href="#icon-globe"/></symbol>
+        <symbol id="icon-chart-xp" viewBox="0 0 32 32"><use href="#icon-chart"/></symbol>
+        <symbol id="icon-github-xp" viewBox="0 0 32 32"><use href="#icon-github"/></symbol>
+        <symbol id="icon-person-xp" viewBox="0 0 32 32"><use href="#icon-person"/></symbol>
+        <symbol id="icon-blog-xp" viewBox="0 0 32 32"><use href="#icon-blog"/></symbol>
+        <symbol id="icon-app-xp" viewBox="0 0 32 32"><use href="#icon-app"/></symbol>
+        <symbol id="icon-key-xp" viewBox="0 0 32 32"><use href="#icon-key"/></symbol>
+        <symbol id="icon-mine-xp" viewBox="0 0 32 32"><use href="#icon-mine"/></symbol>
+        <symbol id="icon-cards-xp" viewBox="0 0 32 32"><use href="#icon-cards"/></symbol>
+        <symbol id="icon-snake-xp" viewBox="0 0 32 32"><use href="#icon-snake"/></symbol>
+        <symbol id="icon-tetris-xp" viewBox="0 0 32 32"><use href="#icon-tetris"/></symbol>
+        <symbol id="icon-settings-xp" viewBox="0 0 32 32"><use href="#icon-settings"/></symbol>
+        <!-- Windows 7 Aero-style -->
+        <symbol id="icon-folder-w7" viewBox="0 0 24 24"><path fill="url(#ico-w7ft)" stroke="#256096" stroke-width="0.35" d="M10 4H4c-1.1 0-2 .9-2 2v2h20V8c0-1.1-.9-2-2-2h-8l-2-2z"/><path fill="url(#ico-w7fb)" stroke="#256096" stroke-width="0.35" d="M2 10v10a2 2 0 002 2h16a2 2 0 002-2V10H2z"/></symbol>
+        <symbol id="icon-folder-open-w7" viewBox="0 0 24 24"><path fill="url(#ico-w7fb)" stroke="#256096" stroke-width="0.35" d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2L2 18l2-6h18l2 6V8c0-1.1-.9-2-2-2z"/></symbol>
+        <symbol id="icon-terminal-w7" viewBox="0 0 24 24"><rect width="24" height="24" rx="3" fill="url(#ico-w7scr)" stroke="#2d5a22"/><path fill="none" stroke="#F0FFE8" stroke-width="1.35" stroke-linecap="round" d="M5 9l3.5 3L5 15M10.5 15H18"/></symbol>
+        <symbol id="icon-computer-w7" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2" fill="#E8E8E8" stroke="#6a9fd2" stroke-width="0.8"/><rect x="5" y="6" width="14" height="8" fill="#1a3d2e"/><rect x="9" y="17" width="6" height="2" rx="0.5" fill="#c8c8c8"/><rect x="6" y="19" width="12" height="2" rx="0.5" fill="#a8a8a8"/></symbol>
+        <symbol id="icon-globe-w7" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="url(#ico-w7fb)" stroke-width="2"/><ellipse cx="12" cy="12" rx="4" ry="9" fill="none" stroke="#4A9FD8" stroke-width="1"/><line x1="3" y1="12" x2="21" y2="12" stroke="#4A9FD8"/><path fill="url(#ico-w7ft)" opacity="0.4" d="M12 3a9 9 0 019 9h-9V3z"/></symbol>
+        <symbol id="icon-chart-w7" viewBox="0 0 24 24"><rect x="4" y="14" width="4" height="6" rx="0.5" fill="url(#ico-w7fb)"/><rect x="10" y="10" width="4" height="10" rx="0.5" fill="url(#ico-w7ft)"/><rect x="16" y="6" width="4" height="14" rx="0.5" fill="url(#ico-w7ft)"/></symbol>
+        <symbol id="icon-settings-w7" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="#E8E8E8" stroke="#5a5a5a" stroke-width="0.6"/><circle cx="12" cy="12" r="1.8" fill="#555"/><path fill="none" stroke="#888" stroke-width="1.8" stroke-linecap="round" d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2.2 2.2M16.8 16.8l2.2 2.2M5 19l2.2-2.2M16.8 7.2l2.2-2.2"/></symbol>
+        <symbol id="icon-file-w7" viewBox="0 0 24 24"><use href="#icon-file-modern"/></symbol>
+        <symbol id="icon-file-md-w7" viewBox="0 0 24 24"><use href="#icon-file-md-modern"/></symbol>
+        <symbol id="icon-github-w7" viewBox="0 0 24 24"><use href="#icon-github-modern"/></symbol>
+        <symbol id="icon-person-w7" viewBox="0 0 24 24"><use href="#icon-person-modern"/></symbol>
+        <symbol id="icon-blog-w7" viewBox="0 0 24 24"><use href="#icon-blog-modern"/></symbol>
+        <symbol id="icon-app-w7" viewBox="0 0 24 24"><use href="#icon-app-modern"/></symbol>
+        <symbol id="icon-key-w7" viewBox="0 0 24 24"><use href="#icon-key-modern"/></symbol>
+        <symbol id="icon-mine-w7" viewBox="0 0 24 24"><use href="#icon-mine-modern"/></symbol>
+        <symbol id="icon-cards-w7" viewBox="0 0 24 24"><use href="#icon-cards-modern"/></symbol>
+        <symbol id="icon-snake-w7" viewBox="0 0 24 24"><use href="#icon-snake-modern"/></symbol>
+        <symbol id="icon-tetris-w7" viewBox="0 0 24 24"><use href="#icon-tetris-modern"/></symbol>
+        <!-- Windows 8 / Metro flat -->
+        <symbol id="icon-folder-w8" viewBox="0 0 24 24"><path fill="#E1B424" stroke="#a88810" stroke-width="0.3" d="M2 8h20v12a2 2 0 01-2 2H4a2 2 0 01-2-2V8z"/><path fill="#F5D547" d="M2 8V6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v2H2z"/></symbol>
+        <symbol id="icon-folder-open-w8" viewBox="0 0 24 24"><path fill="#C9A008" d="M2 18l2-8h18l2 8H2z"/><path fill="#EDD447" d="M20 6h-8l-2-2H4a2 2 0 00-2 2v2h18V6z"/></symbol>
+        <symbol id="icon-terminal-w8" viewBox="0 0 24 24"><rect width="24" height="24" fill="#5C2D91"/><path fill="none" stroke="#fff" stroke-width="1.45" stroke-linecap="round" d="M5 10l3.5 2.8L5 15.5M11 15.5h7"/></symbol>
+        <symbol id="icon-computer-w8" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" fill="#5C2D91"/><rect x="4" y="6" width="16" height="9" fill="#1E1E1E"/><rect x="8" y="18" width="8" height="2" fill="#fff"/><rect x="6" y="19.5" width="12" height="2" fill="#b0b0b0"/></symbol>
+        <symbol id="icon-globe-w8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#0078D4"/><ellipse cx="12" cy="12" rx="4" ry="9" fill="none" stroke="#fff" stroke-width="1.1"/><line x1="3" y1="12" x2="21" y2="12" stroke="#fff" stroke-width="1"/></symbol>
+        <symbol id="icon-github-w8" viewBox="0 0 24 24"><rect width="24" height="24" fill="#68217A"/><path fill="#fff" d="M12 5.5c-3.4 0-6.2 2.8-6.2 6.2 0 2.7 1.8 5.1 4.2 5.9.3.1.5-.1.5-.4v-1.4c-1.7.4-2-1-2-1-.3-.8-.8-1-.8-1-.7-.5.1-.5.1-.5.8.1 1.3.8 1.3.8.7 1.2 1.9.9 2.4.7.1-.6.3-1.1.6-1.4-1.4-.2-2.8-.7-2.8-2.8 0-.6.2-1.2.6-1.6-.1-.2-.3-1 .1-2.1 0 0 .5-.2 1.8.6.5-.1 1.1-.2 1.7-.2s1.2.1 1.7.2c1.2-.8 1.8-.6 1.8-.6.4 1.1.2 1.9.1 2.1.4.4.6 1 .6 1.6 0 2.2-1.4 2.6-2.8 2.8.3.3.6.9.6 1.8v2.6c0 .2.2.5.5.4 2.5-.9 4.2-3.2 4.2-5.9 0-3.4-2.8-6.2-6.2-6.2z"/></symbol>
+        <symbol id="icon-settings-w8" viewBox="0 0 24 24"><use href="#icon-settings-modern"/></symbol>
+        <symbol id="icon-file-w8" viewBox="0 0 24 24"><use href="#icon-file-modern"/></symbol>
+        <symbol id="icon-file-md-w8" viewBox="0 0 24 24"><use href="#icon-file-md-modern"/></symbol>
+        <symbol id="icon-chart-w8" viewBox="0 0 24 24"><rect x="4" y="14" width="4" height="6" fill="#E81123"/><rect x="10" y="10" width="4" height="10" fill="#107C10"/><rect x="16" y="6" width="4" height="14" fill="#0078D4"/></symbol>
+        <symbol id="icon-person-w8" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="#26A6DA"/><path fill="#0078D4" d="M6 20c0-3.3 2.7-6 6-6s6 2.7 6 6v1H6v-1z"/></symbol>
+        <symbol id="icon-blog-w8" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" fill="#0078D4"/><line x1="7" y1="7" x2="17" y2="7" stroke="#fff" stroke-width="1.5"/><line x1="7" y1="10" x2="17" y2="10" stroke="#fff" stroke-width="1.2" opacity=".9"/><line x1="7" y1="13" x2="14" y2="13" stroke="#fff" stroke-width="1.2" opacity=".85"/></symbol>
+        <symbol id="icon-app-w8" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" fill="#5C2D91"/><rect x="3" y="5" width="18" height="5" fill="#fff" opacity=".95"/><line x1="7" y1="14" x2="15" y2="14" stroke="#fff"/><line x1="7" y1="17" x2="12" y2="17" stroke="#fff" opacity=".9"/></symbol>
+        <symbol id="icon-key-w8" viewBox="0 0 24 24"><use href="#icon-key-modern"/></symbol>
+        <symbol id="icon-mine-w8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="#252525"/><line x1="12" y1="4" x2="12" y2="20" stroke="#fff" stroke-width="1.4"/><line x1="4" y1="12" x2="20" y2="12" stroke="#fff" stroke-width="1.4"/><line x1="6" y1="6" x2="18" y2="18" stroke="#fff" stroke-width="1.2"/><line x1="18" y1="6" x2="6" y2="18" stroke="#fff" stroke-width="1.2"/><circle cx="10" cy="10" r="1.5" fill="#fff"/></symbol>
+        <symbol id="icon-cards-w8" viewBox="0 0 24 24"><rect x="3" y="5" width="11" height="15" rx="1" fill="#fff"/><rect x="8" y="3" width="11" height="15" rx="1" fill="#f0f0f0"/><text x="7" y="14" fill="#E81123" font-size="6" font-weight="bold">♥</text></symbol>
+        <symbol id="icon-snake-w8" viewBox="0 0 24 24"><path fill="none" stroke="#76B82A" stroke-width="2.5" stroke-linecap="round" d="M4 14c0-4 3-7 7-7s7 3 7 7"/><circle cx="6" cy="14" r="3" fill="#76B82A"/><circle cx="5" cy="13" r="0.8" fill="#1a1a1a"/></symbol>
+        <symbol id="icon-tetris-w8" viewBox="0 0 24 24"><rect x="3" y="14" width="5" height="5" fill="#00AFF0"/><rect x="9" y="14" width="5" height="5" fill="#00AFF0"/><rect x="9" y="8" width="5" height="5" fill="#8764B8"/><rect x="15" y="8" width="5" height="5" fill="#8764B8"/></symbol>
+        <!-- Windows 10 = Fluent modern -->
+        <symbol id="icon-folder-w10" viewBox="0 0 24 24"><use href="#icon-folder-modern"/></symbol>
+        <symbol id="icon-folder-open-w10" viewBox="0 0 24 24"><use href="#icon-folder-open-modern"/></symbol>
+        <symbol id="icon-file-w10" viewBox="0 0 24 24"><use href="#icon-file-modern"/></symbol>
+        <symbol id="icon-file-md-w10" viewBox="0 0 24 24"><use href="#icon-file-md-modern"/></symbol>
+        <symbol id="icon-terminal-w10" viewBox="0 0 24 24"><use href="#icon-terminal-modern"/></symbol>
+        <symbol id="icon-computer-w10" viewBox="0 0 24 24"><use href="#icon-computer-modern"/></symbol>
+        <symbol id="icon-globe-w10" viewBox="0 0 24 24"><use href="#icon-globe-modern"/></symbol>
+        <symbol id="icon-chart-w10" viewBox="0 0 24 24"><use href="#icon-chart-modern"/></symbol>
+        <symbol id="icon-github-w10" viewBox="0 0 24 24"><use href="#icon-github-modern"/></symbol>
+        <symbol id="icon-person-w10" viewBox="0 0 24 24"><use href="#icon-person-modern"/></symbol>
+        <symbol id="icon-blog-w10" viewBox="0 0 24 24"><use href="#icon-blog-modern"/></symbol>
+        <symbol id="icon-app-w10" viewBox="0 0 24 24"><use href="#icon-app-modern"/></symbol>
+        <symbol id="icon-key-w10" viewBox="0 0 24 24"><use href="#icon-key-modern"/></symbol>
+        <symbol id="icon-mine-w10" viewBox="0 0 24 24"><use href="#icon-mine-modern"/></symbol>
+        <symbol id="icon-cards-w10" viewBox="0 0 24 24"><use href="#icon-cards-modern"/></symbol>
+        <symbol id="icon-snake-w10" viewBox="0 0 24 24"><use href="#icon-snake-modern"/></symbol>
+        <symbol id="icon-tetris-w10" viewBox="0 0 24 24"><use href="#icon-tetris-modern"/></symbol>
+        <symbol id="icon-settings-w10" viewBox="0 0 24 24"><use href="#icon-settings-modern"/></symbol>
+        <!-- Windows 11: мягкие формы + ссылка на w10 для остальных -->
+        <symbol id="icon-folder-w11" viewBox="0 0 24 24"><path fill="#FFB74D" d="M5.2 5.5h5.4l1.9 1.9H18c1.1 0 2 .8 2 1.9V8H3.2c0-1 .8-1.9 1.9-1.9h.1z"/><path fill="#FFCC80" d="M3 9.5h18v10.5c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V9.5z"/></symbol>
+        <symbol id="icon-folder-open-w11" viewBox="0 0 24 24"><path fill="#FFA726" d="M20.2 6.5h-7.8l-2-2H5.2c-1 0-1.8.7-1.9 1.7L2.3 17.5h19.4l.3-9c.1-1-.7-2-1.8-2z"/><path fill="#FFCC80" d="M2.5 10h19l-1.2 8.5H4.2L2.5 10z"/></symbol>
+        <symbol id="icon-github-w11" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#F5F5F5"/><g transform="translate(12,12) scale(0.88) translate(-12,-12)"><path fill="#24292F" d="M12 2C6.48 2 2 6.58 2 12.26c0 4.5 2.87 8.32 6.84 9.67.5.1.68-.22.68-.48 0-.24-.01-.87-.01-1.7-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.1-1.5-1.1-1.5-.9-.64.07-.62.07-.62 1 .07 1.53 1.05 1.53 1.05.9 1.52 2.35 1.08 2.92.83.09-.65.35-1.09.63-1.34-2.22-.26-4.55-1.14-4.55-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.72 0 0 .84-.27 2.75 1.05A9.38 9.38 0 0112 6.84c.85.004 1.71.11 2.5.33 1.91-1.32 2.75-1.05 2.75-1.05.55 1.42.2 2.46.1 2.72.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.8-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.48-.01 2.82 0 .27.18.59.69.48A10.02 10.02 0 0022 12.26C22 6.58 17.52 2 12 2z"/></g></symbol>
+        <symbol id="icon-settings-w11" viewBox="0 0 24 24"><path fill="#8A8886" stroke-linejoin="round" d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65A.488.488 0 0014 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.13-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></symbol>
+        <symbol id="icon-file-w11" viewBox="0 0 24 24"><use href="#icon-file-w10"/></symbol>
+        <symbol id="icon-file-md-w11" viewBox="0 0 24 24"><use href="#icon-file-md-w10"/></symbol>
+        <symbol id="icon-terminal-w11" viewBox="0 0 24 24"><use href="#icon-terminal-w10"/></symbol>
+        <symbol id="icon-computer-w11" viewBox="0 0 24 24"><use href="#icon-computer-w10"/></symbol>
+        <symbol id="icon-globe-w11" viewBox="0 0 24 24"><use href="#icon-globe-w10"/></symbol>
+        <symbol id="icon-chart-w11" viewBox="0 0 24 24"><use href="#icon-chart-w10"/></symbol>
+        <symbol id="icon-person-w11" viewBox="0 0 24 24"><use href="#icon-person-w10"/></symbol>
+        <symbol id="icon-blog-w11" viewBox="0 0 24 24"><use href="#icon-blog-w10"/></symbol>
+        <symbol id="icon-app-w11" viewBox="0 0 24 24"><use href="#icon-app-w10"/></symbol>
+        <symbol id="icon-key-w11" viewBox="0 0 24 24"><use href="#icon-key-w10"/></symbol>
+        <symbol id="icon-mine-w11" viewBox="0 0 24 24"><use href="#icon-mine-w10"/></symbol>
+        <symbol id="icon-cards-w11" viewBox="0 0 24 24"><use href="#icon-cards-w10"/></symbol>
+        <symbol id="icon-snake-w11" viewBox="0 0 24 24"><use href="#icon-snake-w10"/></symbol>
+        <symbol id="icon-tetris-w11" viewBox="0 0 24 24"><use href="#icon-tetris-w10"/></symbol>
+    </svg>
+
+    <script src="/static/js/wm.js"></script>
+    <script src="/static/js/desktop.js"></script>
+    <script src="/static/js/apps.js"></script>
+    <script src="/static/js/terminal.js"></script>
+    <script src="/static/js/admin.js"></script>
+</body>
+</html>

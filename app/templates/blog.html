@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if post %}{{ post.title }}{% else %}Blog{% endif %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/blog.css">
+    <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+<header class="blog-header">
+    <h1><a href="/blog">Blog</a></h1>
+    <div class="header-links">
+        <a href="/" class="os-link"><i data-lucide="monitor" style="width:14px;height:14px"></i> Veomall OS</a>
+    </div>
+</header>
+
+{% if post %}
+{# ---- Single Post View ---- #}
+<div class="post-layout">
+    <a href="/blog" class="post-back"><i data-lucide="arrow-left" style="width:14px;height:14px"></i> All posts</a>
+
+    <article>
+        <header class="post-header">
+            <h1>{{ post.title }}</h1>
+            <div class="post-meta">
+                <span><i data-lucide="calendar" style="width:14px;height:14px"></i> {{ post.created_at.strftime('%d %b %Y') if post.created_at else '' }}</span>
+                {% if post.tags %}
+                    {% for tag in post.tags.split(',') %}
+                        <span class="pm-tag">{{ tag.strip() }}</span>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </header>
+
+        {% if post.cover_image %}
+        <img src="{{ post.cover_image }}" alt="" class="post-cover">
+        {% endif %}
+
+        <div class="markdown-body">
+            {{ html_content | safe }}
+        </div>
+    </article>
+</div>
+
+{% else %}
+{# ---- Blog Index ---- #}
+
+<div class="search-section">
+    <div class="search-box">
+        <span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span>
+        <input type="text" id="search-input" placeholder="Search posts...">
+    </div>
+</div>
+
+{% if all_tags %}
+<div class="tags-section">
+    <span class="tags-label"><i data-lucide="tag" style="width:14px;height:14px"></i> Tags:</span>
+    {% for tag in all_tags %}
+    <span class="tag-pill" data-tag="{{ tag }}">{{ tag }}</span>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="cards-section">
+    {% if posts %}
+    <div class="card-grid" id="card-grid">
+        {% for p in posts %}
+        <a href="/blog/{{ p.slug }}" class="card" data-title="{{ p.title|lower }}" data-tags="{{ p.tags|lower if p.tags else '' }}" data-excerpt="{{ p.excerpt|lower if p.excerpt else '' }}">
+            <div class="card-image">
+                {% if p.cover_image %}
+                <div class="card-blur" style="background-image:url('{{ p.cover_image }}')"></div>
+                <img src="{{ p.cover_image }}" alt="" loading="lazy">
+                {% else %}
+                <div class="no-image"><i data-lucide="file-text" style="width:40px;height:40px"></i></div>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="card-date"><i data-lucide="calendar" style="width:12px;height:12px"></i> {{ p.created_at.strftime('%d %b %Y') if p.created_at else '' }}</div>
+                <div class="card-title">{{ p.title }}</div>
+                {% if p.excerpt %}
+                <div class="card-excerpt">{{ p.excerpt }}</div>
+                {% endif %}
+                {% if p.tags %}
+                <div class="card-tags">
+                    {% for tag in p.tags.split(',') %}
+                    <span class="card-tag">{{ tag.strip() }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <h2>Blog</h2>
+        <p>No posts published yet. Check back soon!</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    lucide.createIcons();
+
+    const searchInput = document.getElementById('search-input');
+    const cards = document.querySelectorAll('.card');
+    const tagPills = document.querySelectorAll('.tag-pill');
+    let activeTag = '';
+
+    function filterCards() {
+        const q = searchInput?.value.toLowerCase() || '';
+        cards.forEach(card => {
+            const title = card.dataset.title || '';
+            const tags = card.dataset.tags || '';
+            const excerpt = card.dataset.excerpt || '';
+            const matchesSearch = !q || title.includes(q) || tags.includes(q) || excerpt.includes(q);
+            const matchesTag = !activeTag || tags.includes(activeTag.toLowerCase());
+            card.style.display = matchesSearch && matchesTag ? '' : 'none';
+        });
+    }
+
+    searchInput?.addEventListener('input', filterCards);
+
+    tagPills.forEach(pill => {
+        pill.addEventListener('click', () => {
+            const tag = pill.dataset.tag;
+            if (activeTag === tag) {
+                activeTag = '';
+                pill.classList.remove('active');
+            } else {
+                tagPills.forEach(p => p.classList.remove('active'));
+                activeTag = tag;
+                pill.classList.add('active');
+            }
+            filterCards();
+        });
+    });
+});
+</script>
+{% endif %}
+
+<script>document.addEventListener('DOMContentLoaded', () => lucide.createIcons());</script>
+</body>
+</html>
