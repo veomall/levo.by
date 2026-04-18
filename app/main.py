@@ -138,7 +138,7 @@ async def api_blog(session: AsyncSession = Depends(get_session)):
         select(BlogPost).where(BlogPost.published == True).order_by(BlogPost.created_at.desc())
     )
     return [
-        {"id": p.id, "slug": p.slug, "title": p.title, "excerpt": p.excerpt,
+        {"id": p.id, "slug": p.slug, "title": p.title, "excerpt": p.excerpt, "content": p.content,
          "cover_image": p.cover_image, "tags": p.tags, "created_at": str(p.created_at)}
         for p in rows.scalars().all()
     ]

@@ -36,11 +36,11 @@
             {% endif %}
         </div>
 
-        {% if post.cover_image %}
+        <!-- {% if post.cover_image %}
         <figure class="post-cover-wrap">
             <img src="{{ post.cover_image }}" alt="" class="post-cover">
         </figure>
-        {% endif %}
+        {% endif %} -->
 
         <div class="markdown-body">
             {{ html_content | safe }}
@@ -71,7 +71,7 @@
     {% if posts %}
     <div class="card-grid" id="card-grid">
         {% for p in posts %}
-        <a href="/blog/{{ p.slug }}" class="card" data-title="{{ p.title|lower }}" data-tags="{{ p.tags|lower if p.tags else '' }}" data-excerpt="{{ p.excerpt|lower if p.excerpt else '' }}">
+        <a href="/blog/{{ p.slug }}" class="card" data-title="{{ p.title|lower }}" data-tags="{{ p.tags|lower if p.tags else '' }}" data-excerpt="{{ p.excerpt|lower if p.excerpt else '' }}" data-content="{{ p.content|lower }}">
             <div class="card-image">
                 {% if p.cover_image %}
                 <div class="card-blur" style="background-image:url('{{ p.cover_image }}')"></div>
@@ -120,7 +120,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const title = card.dataset.title || '';
             const tags = card.dataset.tags || '';
             const excerpt = card.dataset.excerpt || '';
-            const matchesSearch = !q || title.includes(q) || tags.includes(q) || excerpt.includes(q);
+            const content = card.dataset.content || '';
+            const matchesSearch = !q || title.includes(q) || tags.includes(q) || excerpt.includes(q) || content.includes(q);
             const matchesTag = !activeTag || tags.includes(activeTag.toLowerCase());
             card.style.display = matchesSearch && matchesTag ? '' : 'none';
         });
