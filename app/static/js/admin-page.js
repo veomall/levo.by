@@ -48,9 +48,21 @@
 
     async function uploadFile(file) {
         const fd = new FormData();
-        fd.append('file', file);
+        const safeName = (file && file.name && /\.[a-z0-9]+$/i.test(file.name))
+            ? file.name
+            : `paste-${Date.now()}.png`;
+        fd.append('file', file, safeName);
         const r = await fetch('/api/admin/upload', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
-        return r.json();
+        let data;
+        try {
+            data = await r.json();
+        } catch {
+            return { detail: 'Invalid server response' };
+        }
+        if (!r.ok) {
+            return { detail: data.detail || data.message || `HTTP ${r.status}`, url: null };
+        }
+        return data;
     }
 
     const CYR_TO_LAT = {
@@ -105,14 +117,25 @@
         const files = dataTransfer.files;
         if (files && files.length) {
             for (let i = 0; i < files.length; i++) {
-                if (files[i].type.startsWith('image/')) return files[i];
+                const f = files[i];
+                if (f.type.startsWith('image/')) return f;
             }
         }
         const items = dataTransfer.items;
-        if (!items) return null;
+        if (!items || !items.length) return null;
         for (let i = 0; i < items.length; i++) {
-            if (items[i].type.startsWith('image/')) {
-                const f = items[i].getAsFile();
+            const it = items[i];
+            if (it.kind === 'file') {
+                const f = it.getAsFile();
+                if (!f) continue;
+                if (f.type.startsWith('image/')) return f;
+                /* Chrome/Edge часто дают вставленный снимок с пустым type */
+                if (!f.type && f.size > 0) {
+                    return new File([f], `pasted-${Date.now()}.png`, { type: 'image/png' });
+                }
+            }
+            if (it.type && it.type.startsWith('image/')) {
+                const f = it.getAsFile();
                 if (f) return f;
             }
         }
@@ -434,14 +457,6 @@
                 slugSpan.textContent = s ? `slug: ${s}` : '';
             }
         });
-        titleInput.addEventListener('paste', async (e) => {
-            const img = imageFromClipboard(e.clipboardData);
-            if (img) {
-                e.preventDefault();
-                const d = await uploadFile(img);
-                if (d && d.url) { coverUrl = d.url; renderCover(); toast('Cover from clipboard'); }
-            }
-        });
 
         // -- Cover upload
         const coverFileInput = el('input', { type: 'file', accept: 'image/*', style: 'display:none' });
@@ -469,15 +484,7 @@
 
         renderCover();
         coverArea.tabIndex = 0;
-        coverArea.setAttribute('title', 'Click to choose file, or paste an image from clipboard');
-        coverArea.addEventListener('paste', async (e) => {
-            const img = imageFromClipboard(e.clipboardData);
-            if (img) {
-                e.preventDefault();
-                const d = await uploadFile(img);
-                if (d && d.url) { coverUrl = d.url; renderCover(); toast('Cover pasted'); }
-            }
-        });
+        coverArea.setAttribute('title', 'Click to choose file, or paste an image from clipboard (works when editor or title is focused too)');
 
         overlay.appendChild(el('div', { cls: 'writer-head' }, titleInput, slugSpan, coverArea));
 
@@ -602,17 +609,33 @@
             if (showPreview) { clearTimeout(previewTimer); previewTimer = setTimeout(refreshPreview, 300); }
         }
 
-        textarea.addEventListener('paste', async (e) => {
+        /* Одна вставка из буфера на весь редактор: Chrome даёт image с kind=file и пустым type — см. imageFromClipboard */
+        overlay.addEventListener('paste', async (e) => {
             const img = imageFromClipboard(e.clipboardData);
-            if (img) {
-                e.preventDefault();
-                const d = await uploadFile(img);
-                if (d && d.url) {
-                    ins(`![image](${d.url})`);
-                    toast('Image inserted from clipboard');
-                }
+            if (!img) return;
+            const t = e.target;
+            const inEditor = t === textarea || (t.closest && t.closest('.writer-editor'));
+            const inTitle = t === titleInput;
+            const inCover = t === coverArea || (coverArea.contains && coverArea.contains(t));
+            e.preventDefault();
+            e.stopPropagation();
+            const d = await uploadFile(img);
+            if (!d || !d.url) {
+                toast((d && d.detail) || 'Upload failed', false);
+                return;
             }
-        });
+            if (inEditor) {
+                ins(`![image](${d.url})`);
+                toast('Image inserted');
+            } else if (inTitle || inCover) {
+                coverUrl = d.url;
+                renderCover();
+                toast('Cover set');
+            } else {
+                ins(`![image](${d.url})`);
+                toast('Image inserted');
+            }
+        }, true);
 
         function doInsertLink() {
             const url = prompt('Enter URL:', 'https://');
@@ -633,8 +656,8 @@
             fileIn.addEventListener('change', async () => {
                 const f = fileIn.files[0]; if (!f) return;
                 const d = await uploadFile(f);
-                if (d.url) { ins(`![${f.name}](${d.url})`); bg.remove(); toast('Uploaded!'); }
-                else toast(d.detail || 'Upload failed', false);
+                if (d && d.url) { ins(`![${f.name}](${d.url})`); bg.remove(); toast('Uploaded!'); }
+                else toast((d && d.detail) || 'Upload failed', false);
             });
 
             dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor = 'var(--a-accent)'; });
@@ -644,12 +667,13 @@
             bg.tabIndex = 0;
             bg.addEventListener('paste', async (e) => {
                 const img = imageFromClipboard(e.clipboardData);
-                if (img) {
-                    e.preventDefault();
-                    const d = await uploadFile(img);
-                    if (d && d.url) { ins(`![image](${d.url})`); bg.remove(); toast('Pasted'); }
-                }
-            });
+                if (!img) return;
+                e.preventDefault();
+                e.stopPropagation();
+                const d = await uploadFile(img);
+                if (d && d.url) { ins(`![image](${d.url})`); bg.remove(); toast('Pasted'); }
+                else toast((d && d.detail) || 'Upload failed', false);
+            }, true);
 
             bg.appendChild(el('div', { cls: 'modal' },
                 el('h3', {}, 'Insert Image'),

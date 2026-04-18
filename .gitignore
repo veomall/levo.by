@@ -44,7 +44,7 @@ htmlcov/
 *.db
 *.sqlite
 *.sqlite3
-data/
+uploads/
 
 # IDE / editor
 .idea/
