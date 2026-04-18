@@ -53,6 +53,72 @@
         return r.json();
     }
 
+    const CYR_TO_LAT = {
+        а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i', й: 'y',
+        к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f',
+        х: 'h', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'sch', ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
+        і: 'i', ї: 'yi', є: 'ye', ґ: 'g', ў: 'u',
+    };
+
+    const LATIN1 = { ß: 'ss', æ: 'ae', œ: 'oe', ø: 'o', ð: 'd', þ: 'th' };
+
+    function transliterateChunk(str) {
+        if (!str || !String(str).trim()) return '';
+        let raw = String(str).normalize('NFD').replace(/\p{M}/gu, '');
+        let out = '';
+        for (const ch of raw) {
+            const lo = ch.toLowerCase();
+            if (Object.prototype.hasOwnProperty.call(CYR_TO_LAT, lo)) out += CYR_TO_LAT[lo];
+            else if (Object.prototype.hasOwnProperty.call(LATIN1, lo)) out += LATIN1[lo];
+            else if (/[a-z0-9]/i.test(ch) && ch.codePointAt(0) < 128) out += lo;
+            else if (/\s/.test(ch) || ch === '-' || ch === '_') out += ' ';
+            else out += ' ';
+        }
+        return out
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '');
+    }
+
+    function normalizeBlogSlug(slugOrTitle, maxWords = 8) {
+        const text = (slugOrTitle || '').trim();
+        if (!text) return '';
+        const tailRe = /^(.+)-(\d{4}-\d{2}-\d{2})$/;
+        const m = text.match(tailRe);
+        let coreRaw;
+        let dateSuf;
+        if (m) { coreRaw = m[1]; dateSuf = m[2]; }
+        else { coreRaw = text; dateSuf = null; }
+        let core = transliterateChunk(coreRaw);
+        const words = core.split('-').filter(Boolean).slice(0, maxWords);
+        const coreSlug = words.join('-');
+        if (dateSuf) return coreSlug ? `${coreSlug}-${dateSuf}` : dateSuf;
+        const d = new Date();
+        const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        return coreSlug ? `${coreSlug}-${ds}` : ds;
+    }
+
+    function imageFromClipboard(dataTransfer) {
+        if (!dataTransfer) return null;
+        const files = dataTransfer.files;
+        if (files && files.length) {
+            for (let i = 0; i < files.length; i++) {
+                if (files[i].type.startsWith('image/')) return files[i];
+            }
+        }
+        const items = dataTransfer.items;
+        if (!items) return null;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.startsWith('image/')) {
+                const f = items[i].getAsFile();
+                if (f) return f;
+            }
+        }
+        return null;
+    }
+
     /* ======== RENDER ======== */
 
     function render() {
@@ -359,19 +425,21 @@
         topItems.push(previewBtn, saveBtn);
         overlay.appendChild(el('div', { cls: 'writer-topbar' }, ...topItems));
 
-        // -- Title + slug
-        function genSlug(title) {
-            const words = title.toLowerCase().replace(/[^a-zа-яё0-9\s]/gi, '').trim().split(/\s+/).slice(0, 6).join('-');
-            const d = new Date(); const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-            return words ? `${words}-${ds}` : '';
-        }
-
+        // -- Title + slug (Latin slug + date; matches server normalize_blog_slug)
         const slugSpan = el('div', { cls: 'wh-slug', id: 'w-slug-display' }, data.slug ? `slug: ${data.slug}` : '');
         const titleInput = el('input', { cls: 'wh-title', id: 'w-title', placeholder: 'Post title...', value: data.title || '' });
         titleInput.addEventListener('input', () => {
             if (!data.id) {
-                const s = genSlug(titleInput.value);
+                const s = normalizeBlogSlug(titleInput.value);
                 slugSpan.textContent = s ? `slug: ${s}` : '';
+            }
+        });
+        titleInput.addEventListener('paste', async (e) => {
+            const img = imageFromClipboard(e.clipboardData);
+            if (img) {
+                e.preventDefault();
+                const d = await uploadFile(img);
+                if (d && d.url) { coverUrl = d.url; renderCover(); toast('Cover from clipboard'); }
             }
         });
 
@@ -387,7 +455,7 @@
                 coverArea.appendChild(rm);
             } else {
                 coverArea.innerHTML = '<i data-lucide="image-plus" style="width:28px;height:28px;color:#d4d4d8"></i>';
-                coverArea.appendChild(el('p', {}, 'Click to upload cover image'));
+                coverArea.appendChild(el('p', {}, 'Click or paste image (Ctrl+V)'));
             }
             coverArea.appendChild(coverFileInput);
             ric();
@@ -400,6 +468,16 @@
         });
 
         renderCover();
+        coverArea.tabIndex = 0;
+        coverArea.setAttribute('title', 'Click to choose file, or paste an image from clipboard');
+        coverArea.addEventListener('paste', async (e) => {
+            const img = imageFromClipboard(e.clipboardData);
+            if (img) {
+                e.preventDefault();
+                const d = await uploadFile(img);
+                if (d && d.url) { coverUrl = d.url; renderCover(); toast('Cover pasted'); }
+            }
+        });
 
         overlay.appendChild(el('div', { cls: 'writer-head' }, titleInput, slugSpan, coverArea));
 
@@ -524,6 +602,18 @@
             if (showPreview) { clearTimeout(previewTimer); previewTimer = setTimeout(refreshPreview, 300); }
         }
 
+        textarea.addEventListener('paste', async (e) => {
+            const img = imageFromClipboard(e.clipboardData);
+            if (img) {
+                e.preventDefault();
+                const d = await uploadFile(img);
+                if (d && d.url) {
+                    ins(`![image](${d.url})`);
+                    toast('Image inserted from clipboard');
+                }
+            }
+        });
+
         function doInsertLink() {
             const url = prompt('Enter URL:', 'https://');
             if (!url) return;
@@ -551,8 +641,19 @@
             dz.addEventListener('dragleave', () => dz.style.borderColor = '');
             dz.addEventListener('drop', e => { e.preventDefault(); dz.style.borderColor = ''; if (e.dataTransfer.files[0]) { fileIn.files = e.dataTransfer.files; fileIn.dispatchEvent(new Event('change')); } });
 
+            bg.tabIndex = 0;
+            bg.addEventListener('paste', async (e) => {
+                const img = imageFromClipboard(e.clipboardData);
+                if (img) {
+                    e.preventDefault();
+                    const d = await uploadFile(img);
+                    if (d && d.url) { ins(`![image](${d.url})`); bg.remove(); toast('Pasted'); }
+                }
+            });
+
             bg.appendChild(el('div', { cls: 'modal' },
                 el('h3', {}, 'Insert Image'),
+                el('p', { style: 'font-size:11px;color:var(--a-muted);margin:0 0 8px' }, 'Paste from clipboard (Ctrl+V), drop a file, or use URL'),
                 dz,
                 el('div', { style: 'margin:14px 0 10px;font-size:12px;text-align:center;color:var(--a-muted)' }, '— or insert by URL —'),
                 el('div', { style: 'display:flex;gap:8px' },
@@ -564,10 +665,11 @@
 
             parent.appendChild(bg);
             ric();
+            setTimeout(() => bg.focus(), 50);
         }
 
         async function savePost(id, ov) {
-            const slug = data.id ? data.slug : genSlug(titleInput.value);
+            const slug = data.id ? data.slug : normalizeBlogSlug(titleInput.value);
             const body = {
                 title: titleInput.value || '',
                 slug: slug || '',

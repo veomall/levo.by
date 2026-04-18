@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import ADMIN_PASSWORD, ADMIN_PASSWORD_HASH, GITHUB_USERNAME
 from app.database import init_db, get_session, Profile, Project, BlogPost, WorkExperience, Skill
 from app.auth import create_access_token, require_admin, verify_admin_login
+from app.slugify import normalize_blog_slug
 
 BASE_DIR = Path(__file__).resolve().parent
 UPLOADS_DIR = BASE_DIR / "static" / "uploads"
@@ -42,6 +43,21 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 MD_EXTENSIONS = ["fenced_code", "codehilite", "tables", "toc", "nl2br"]
+MD_EXTENSION_CONFIGS = {
+    "codehilite": {
+        "pygments_style": "dracula",
+        "noclasses": True,
+        "guess_lang": True,
+    },
+}
+
+
+def md_to_html(text: str) -> str:
+    return markdown.markdown(
+        text,
+        extensions=MD_EXTENSIONS,
+        extension_configs=MD_EXTENSION_CONFIGS,
+    )
 
 
 # --------------- Pages ---------------
@@ -79,7 +95,7 @@ async def blog_post_page(request: Request, slug: str, session: AsyncSession = De
         select(BlogPost).where(BlogPost.published == True).order_by(BlogPost.created_at.desc())
     )
     posts = rows.scalars().all()
-    html_content = markdown.markdown(post.content, extensions=MD_EXTENSIONS)
+    html_content = md_to_html(post.content)
     return templates.TemplateResponse(request, "blog.html", {
         "posts": posts, "post": post, "html_content": html_content, "all_tags": [],
     })
@@ -134,7 +150,7 @@ async def api_blog_detail(slug: str, session: AsyncSession = Depends(get_session
     p = row.scalar_one_or_none()
     if not p:
         raise HTTPException(404, "Not found")
-    html = markdown.markdown(p.content, extensions=MD_EXTENSIONS)
+    html = md_to_html(p.content)
     return {
         "id": p.id, "slug": p.slug, "title": p.title, "content": p.content,
         "html": html, "excerpt": p.excerpt, "cover_image": p.cover_image, "tags": p.tags,
@@ -380,7 +396,7 @@ class MarkdownPreview(BaseModel):
 
 @app.post("/api/admin/preview-markdown")
 async def preview_markdown(body: MarkdownPreview, _=Depends(require_admin)):
-    html = markdown.markdown(body.content, extensions=MD_EXTENSIONS)
+    html = md_to_html(body.content)
     return {"html": html}
 
 
@@ -449,7 +465,11 @@ async def admin_list_blog(_=Depends(require_admin), session: AsyncSession = Depe
 
 @app.post("/api/admin/blog")
 async def create_blog_post(body: BlogPostCreate, _=Depends(require_admin), session: AsyncSession = Depends(get_session)):
-    p = BlogPost(**body.model_dump())
+    data = body.model_dump()
+    data["slug"] = normalize_blog_slug(data.get("slug") or data.get("title") or "")
+    if not data["slug"]:
+        raise HTTPException(400, "Could not build slug from title")
+    p = BlogPost(**data)
     session.add(p)
     await session.commit()
     return {"id": p.id}
@@ -461,7 +481,11 @@ async def update_blog_post(pid: int, body: BlogPostCreate, _=Depends(require_adm
     p = row.scalar_one_or_none()
     if not p:
         raise HTTPException(404)
-    for field, val in body.model_dump().items():
+    data = body.model_dump()
+    data["slug"] = normalize_blog_slug(data.get("slug") or data.get("title") or "")
+    if not data["slug"]:
+        raise HTTPException(400, "Could not build slug from title")
+    for field, val in data.items():
         setattr(p, field, val)
     await session.commit()
     return {"ok": True}
